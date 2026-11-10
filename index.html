@@ -14,25 +14,27 @@
   <meta name="apple-mobile-web-app-title" content="نموذج الزيارة">
   <script>
   (function(){
-    const c = document.createElement('canvas'); c.width = c.height = 512;
-    const x = c.getContext('2d');
-    x.fillStyle = '#8b1e1e'; x.fillRect(0,0,512,512);
-    x.fillStyle = '#fff'; x.fillRect(126,86,260,340);
-    x.strokeStyle = '#8b1e1e'; x.lineWidth = 30; x.lineCap = 'round'; x.lineJoin = 'round';
-    x.beginPath(); x.moveTo(185,262); x.lineTo(240,320); x.lineTo(335,200); x.stroke();
-    const url = c.toDataURL('image/png');
-    ['icon','apple-touch-icon'].forEach(rel=>{
-      const l = document.createElement('link'); l.rel = rel; l.href = url; document.head.appendChild(l);
-    });
-    const manifest = {
-      name: 'نموذج الزيارة الميدانية', short_name: 'نموذج الزيارة',
-      start_url: location.href, display: 'standalone', dir: 'rtl', lang: 'ar',
-      background_color: '#ffffff', theme_color: '#8b1e1e',
-      icons: [{ src: url, sizes: '512x512', type: 'image/png' }]
-    };
-    const m = document.createElement('link'); m.rel = 'manifest';
-    m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/json'}));
-    document.head.appendChild(m);
+    try{
+      const c = document.createElement('canvas'); c.width = c.height = 512;
+      const x = c.getContext('2d');
+      x.fillStyle = '#8b1e1e'; x.fillRect(0,0,512,512);
+      x.fillStyle = '#fff'; x.fillRect(126,86,260,340);
+      x.strokeStyle = '#8b1e1e'; x.lineWidth = 30; x.lineCap = 'round'; x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(185,262); x.lineTo(240,320); x.lineTo(335,200); x.stroke();
+      const url = c.toDataURL('image/png');
+      ['icon','apple-touch-icon'].forEach(rel=>{
+        const l = document.createElement('link'); l.rel = rel; l.href = url; document.head.appendChild(l);
+      });
+      const manifest = {
+        name: 'نموذج الزيارة الميدانية', short_name: 'نموذج الزيارة',
+        start_url: location.href, display: 'standalone', dir: 'rtl', lang: 'ar',
+        background_color: '#ffffff', theme_color: '#8b1e1e',
+        icons: [{ src: url, sizes: '512x512', type: 'image/png' }]
+      };
+      const m = document.createElement('link'); m.rel = 'manifest';
+      m.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/json'}));
+      document.head.appendChild(m);
+    }catch(e){}
   })();
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -84,16 +86,19 @@
     .legend { font-size: 12px; color: #555; margin: 6px 0; }
     .foot { display: none; }
 
-    /* نافذة خيارات الحفظ */
-    #saveModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; align-items: flex-end; justify-content: center; }
-    #saveModal.show { display: flex; }
-    .sheet { background: #fff; width: 100%; max-width: 520px; border-radius: 16px 16px 0 0; padding: 18px 16px 24px; }
-    .sheet h3 { margin: 0 0 4px; color: #8b1e1e; font-size: 17px; }
+    /* النوافذ والرسائل */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    .modal.show { display: flex; }
+    .sheet { background: #fff; width: 100%; max-width: 420px; border-radius: 14px; padding: 18px 16px; text-align: center; }
+    .sheet h3 { margin: 0 0 6px; color: #8b1e1e; font-size: 17px; }
     .sheet p { margin: 0 0 12px; font-size: 13px; color: #555; word-break: break-all; }
     .sheet button { display: block; width: 100%; padding: 13px; margin-bottom: 8px; border: 0; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
-    .sheet .m-share { background: #8b1e1e; color: #fff; }
-    .sheet .m-down { background: #1e7a3a; color: #fff; }
-    .sheet .m-close { background: #eee; color: #333; margin-bottom: 0; }
+    .m-share { background: #8b1e1e; color: #fff; }
+    .m-down { background: #1e7a3a; color: #fff; }
+    .m-open { background: #2c5aa0; color: #fff; }
+    .m-close { background: #eee; color: #333; margin-bottom: 0 !important; }
+    .m-yes { background: #c0392b; color: #fff; }
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 16px; border-radius: 8px; z-index: 300; display: none; font-size: 14px; max-width: 90%; text-align: center; }
 
     body.pdf { background: #fff; font-size: 11px; }
     body.pdf .wrap { width: 794px; max-width: none; margin: 0; padding: 0 6px; }
@@ -125,20 +130,33 @@
   <body>
 
   <div class="toolbar">
-    <button class="b-save" id="saveBtn" onclick="savePDF()">💾 حفظ الملف PDF</button>
-    <button class="b-clear" onclick="clearAll()">🗑️ مسح الكل</button>
+    <button type="button" class="b-save" id="saveBtn">💾 حفظ الملف PDF</button>
+    <button type="button" class="b-clear" id="clearBtn">🗑️ مسح الكل</button>
   </div>
 
   <!-- نافذة خيارات الحفظ -->
-  <div id="saveModal">
+  <div id="saveModal" class="modal">
     <div class="sheet">
       <h3>✅ الملف جاهز</h3>
       <p id="modalName"></p>
-      <button class="m-share" onclick="shareNow()">📂 حفظ في الملفات / مشاركة</button>
-      <button class="m-down" onclick="downloadNow()">⬇️ تنزيل مباشر</button>
-      <button class="m-close" onclick="closeModal()">إغلاق</button>
+      <button type="button" class="m-share" id="shareBtn">📂 حفظ في الملفات / مشاركة</button>
+      <button type="button" class="m-down" id="downBtn">⬇️ تنزيل مباشر</button>
+      <button type="button" class="m-open" id="openBtn">👁️ فتح الملف</button>
+      <button type="button" class="m-close" id="closeSave">إغلاق</button>
     </div>
   </div>
+
+  <!-- نافذة تأكيد المسح -->
+  <div id="confirmModal" class="modal">
+    <div class="sheet">
+      <h3>🗑️ مسح جميع البيانات</h3>
+      <p style="word-break:normal">سيتم مسح جميع البيانات المدخلة. هل أنت متأكد؟</p>
+      <button type="button" class="m-yes" id="yesClear">نعم، امسح</button>
+      <button type="button" class="m-close" id="noClear">إلغاء</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
 
   <div class="wrap" id="form">
     <p class="brand">ركن الكباب البلدي</p>
@@ -165,7 +183,7 @@
 
     <div id="sections"></div>
 
-    <div>
+    <div class="pb">
       <h2>تاسعاً: الملاحظات والإجراءات التصحيحية</h2>
       <div id="actions"></div>
 
@@ -190,21 +208,10 @@
     {t:'ثانياً: المظهر العام والنظافة', k:'s2', items:[
       'نظافة الواجهة والمدخل واللوحات والإضاءة','نظافة صالة الزبائن والطاولات والأرضيات','نظافة دورات المياه وتوفر المستلزمات','عمل التكييف والإضاءة والتجهيزات','نظافة المطبخ والأسطح والمعدات']},
     {t:'ثالثاً: الموظفون والخدمة', k:'s3', items:[
-      'الالتزام بالزي الرسمي والمظهر الشخصي',
-      'مطابقة الحضور الفعلي لجدول الدوام',
-      'سلوك الموظفين واستقبال الزبائن',
-      'سرعة تقديم الطلبات (الوقت المعتمد)',
-      'سلامة الشهادات الصحية للعاملين',
-      'التزام الموظفين بإجراءات التشغيل المعتمدة',
-      'نظافة الزي الرسمي للموظفين',
-      'نظافة الأظافر وقصّها',
-      'التأكد من لبس القفازات',
-      'التأكد من لبس الكمامات',
-      'تغطية السواعد',
-      'التزام جميع الموظفين بوضع بطاقة الاسم على الزي']},
-    {t:'رابعاً: جودة الطعام وسلامته', k:'s4', pb:true, items:[
+      'الالتزام بالزي الرسمي والمظهر الشخصي','مطابقة الحضور الفعلي لجدول الدوام','سلوك الموظفين واستقبال الزبائن','سرعة تقديم الطلبات (الوقت المعتمد)','سلامة الشهادات الصحية والإقامات للعاملين','التزام الموظفين بإجراءات التشغيل المعتمدة']},
+    {t:'رابعاً: جودة الطعام وسلامته', k:'s4', items:[
       'مطابقة الوجبات للمواصفات والأوزان المعتمدة','تجربة عينة من المنتجات (الطعم، الحرارة، التقديم)','قياس حرارة الثلاجات (0–5°م) والمجمدات (−18°م أو أقل)','وضع التواريخ والملصقات على المواد المحضّرة','فصل اللحوم النيئة عن المطبوخة، وتغطية المواد','الالتزام بقاعدة الوارد أولاً يُصرف أولاً (FIFO)','جودة زيت القلي وتغييره في مواعيده','نظافة المفاحم والأفران ومنافذ التهوية']},
-    {t:'خامساً: المستودع والمخزون', k:'s5', items:[
+    {t:'خامساً: المستودع والمخزون', k:'s5', pb:true, items:[
       'ترتيب المستودع ونظافته وبعده عن الأرض والجدران','مطابقة جرد عينة من الأصناف مع النظام','فحص تواريخ الصلاحية وعدم وجود مواد منتهية','توثيق التالف والهالك بمحاضر معتمدة','تسجيل المواد الفائضة والعجز في نماذجها (يوم 25)','وجود نماذج النقل بين الفروع موقعة ومكتملة']},
     {t:'سادساً: السلامة والنظافة العامة', k:'s6', items:[
       'وجود طفايات حريق سارية الصلاحية ومخارج طوارئ سالكة','سلامة أسطوانات الغاز والتوصيلات الكهربائية','وجود حقيبة إسعافات أولية مكتملة','مكافحة الحشرات وسلامة التخلص من النفايات','سريان التراخيص (بلدية، دفاع مدني) ووضعها في مكان ظاهر']},
@@ -214,11 +221,12 @@
   const axes = ['النظافة والمظهر','الموظفون والخدمة','جودة الطعام وسلامته','المستودع والمخزون','السلامة والتراخيص','الحسابات والمبيعات'];
   const signers = ['الزائر (المدير)','مدير الفرع','اعتماد الإدارة'];
 
+  const $ = id => document.getElementById(id);
   const opt = (type,name,val,label,cls='') =>
     `<label class="opt ${cls}"><input type="${type}" name="${name}" value="${val}"><span>${label}</span></label>`;
 
-  document.getElementById('branches').innerHTML = branches.map(b=>opt('radio','branch',b,b)).join('');
-  document.getElementById('vtypes').innerHTML = vtypes.map(v=>opt('radio','vtype',v,v)).join('');
+  $('branches').innerHTML = branches.map(b=>opt('radio','branch',b,b)).join('');
+  $('vtypes').innerHTML = vtypes.map(v=>opt('radio','vtype',v,v)).join('');
 
   let html = '';
   sections.forEach(s=>{
@@ -235,7 +243,7 @@
   axes.forEach((a,i)=>{
     html += `<div class="rate"><div class="q">${a}</div><div class="opts">${[1,2,3,4,5].map(n=>opt('radio','rate_'+i,n,n)).join('')}</div></div>`;
   });
-  document.getElementById('sections').innerHTML = html;
+  $('sections').innerHTML = html;
 
   let ah = '';
   for(let i=0;i<8;i++){
@@ -244,9 +252,9 @@
       <div><label class="f">المسؤول</label><input type="text" name="a${i}_r"></div>
       <div><label class="f">الموعد النهائي</label><input type="date" name="a${i}_d"></div></div></div>`;
   }
-  document.getElementById('actions').innerHTML = ah;
+  $('actions').innerHTML = ah;
 
-  document.getElementById('sigs').innerHTML = signers.map((s,i)=>
+  $('sigs').innerHTML = signers.map((s,i)=>
     `<div class="sig"><b>${s}</b><label class="f">الاسم</label><input type="text" name="sn${i}">
      <label class="f" style="margin-top:6px">التوقيع</label><canvas class="sg" data-i="${i}"></canvas>
      <button type="button" onclick="clearSig(${i})">مسح التوقيع</button></div>`).join('');
@@ -287,48 +295,70 @@
     const c = canvases[i]; c.getContext('2d').clearRect(0,0,c.width,c.height);
     delete state['sig'+i]; save();
   }
-  function clearAll(){
-    if(confirm('سيتم مسح جميع البيانات المدخلة. هل أنت متأكد؟')){
-      try { localStorage.removeItem(KEY); } catch(e) {}
-      location.reload();
-    }
+
+  /* ===== رسائل ===== */
+  let toastTimer;
+  function toast(msg){
+    const t = $('toast');
+    t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.style.display='none', 5000);
   }
+
+  /* ===== مسح الكل ===== */
+  $('clearBtn').addEventListener('click', ()=> $('confirmModal').classList.add('show'));
+  $('noClear').addEventListener('click', ()=> $('confirmModal').classList.remove('show'));
+  $('yesClear').addEventListener('click', ()=>{
+    try { localStorage.removeItem(KEY); } catch(e) {}
+    location.reload();
+  });
 
   /* ===== حفظ الملف PDF ===== */
   let pdfBlob = null, pdfFile = null, pdfName = '';
 
   function openModal(){
-    document.getElementById('modalName').textContent = pdfName;
-    document.getElementById('saveModal').classList.add('show');
+    $('modalName').textContent = pdfName;
+    $('saveModal').classList.add('show');
   }
-  function closeModal(){
-    document.getElementById('saveModal').classList.remove('show');
-  }
+  function closeModal(){ $('saveModal').classList.remove('show'); }
+  $('closeSave').addEventListener('click', closeModal);
 
-  async function shareNow(){
+  $('shareBtn').addEventListener('click', async ()=>{
     if(!pdfFile) return;
-    if(navigator.canShare && navigator.canShare({ files:[pdfFile] })){
-      try{
+    try{
+      if(navigator.canShare && navigator.canShare({ files:[pdfFile] })){
         await navigator.share({ files:[pdfFile], title: pdfName });
         closeModal();
-      }catch(e){
-        if(e.name !== 'AbortError') downloadNow();
+      } else {
+        toast('المشاركة غير مدعومة هنا، استخدم التنزيل المباشر.');
       }
-    } else {
-      downloadNow();
+    }catch(e){
+      if(e.name !== 'AbortError') toast('تعذرت المشاركة، جرّب التنزيل المباشر.');
     }
-  }
-  function downloadNow(){
+  });
+
+  $('downBtn').addEventListener('click', ()=>{
     if(!pdfBlob) return;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(pdfBlob); a.download = pdfName;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 10000);
-    closeModal();
-  }
+    setTimeout(()=>URL.revokeObjectURL(a.href), 15000);
+    toast('تم بدء التنزيل. إن لم يظهر، استخدم زر "فتح الملف".');
+  });
 
-  async function savePDF(){
-    const btn = document.getElementById('saveBtn');
+  $('openBtn').addEventListener('click', ()=>{
+    if(!pdfBlob) return;
+    const url = URL.createObjectURL(pdfBlob);
+    const w = window.open(url, '_blank');
+    if(!w) location.href = url;
+  });
+
+  $('saveBtn').addEventListener('click', async ()=>{
+    if (typeof html2pdf === 'undefined'){
+      toast('تعذر تحميل مكتبة PDF. تأكد من الإنترنت وافتح الملف من Chrome أو Safari.');
+      return;
+    }
+    const btn = $('saveBtn');
     const label = btn.textContent;
     btn.disabled = true; btn.textContent = '⏳ جارٍ إنشاء الملف...';
     document.body.classList.add('pdf');
@@ -344,30 +374,19 @@
         html2canvas: { scale: 2, useCORS: true, windowWidth: 794, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css'], before: '.pb', avoid: ['.row','.rate','.act','.sig','h2'] }
-      }).from(document.getElementById('form'));
+      }).from($('form'));
       pdfBlob = await worker.outputPdf('blob');
       pdfFile = new File([pdfBlob], pdfName, { type: 'application/pdf' });
       ok = true;
     }catch(err){
-      alert('تعذر إنشاء الملف، حاول مرة أخرى.');
+      toast('تعذر إنشاء الملف: ' + (err && err.message ? err.message : 'خطأ غير معروف'));
       console.error(err);
     }finally{
       document.body.classList.remove('pdf');
       btn.disabled = false; btn.textContent = label;
     }
-    if(!ok) return;
-
-    /* محاولة فتح قائمة الحفظ مباشرة، وإن منعها الجوال تظهر النافذة */
-    if(navigator.canShare && navigator.canShare({ files:[pdfFile] })){
-      try{
-        await navigator.share({ files:[pdfFile], title: pdfName });
-      }catch(e){
-        if(e.name !== 'AbortError') openModal();
-      }
-    } else {
-      openModal();
-    }
-  }
+    if(ok) openModal();   // دائمًا تظهر النافذة ليضغط المستخدم الزر بنفسه
+  });
 
   const d = document.querySelector('[name=date]');
   if(!d.value){ d.value = new Date().toISOString().slice(0,10); state.date = d.value; save(); }
